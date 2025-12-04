@@ -1,0 +1,104 @@
+const express = require('express');
+const router = express.Router();
+const initDB = require('../db.js');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+let db;
+const SALT_ROUNDS = 10;
+const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"; 
+
+
+router.use(async (req, res, next) => {
+  if (!db) db = await initDB();
+  next();
+});
+
+
+router.post('/signup', async (req, res) => {
+  try {
+    const {
+      Username, Password, Firstname, Lastname,
+      Birthdate, Gender, City, Address, Role, Email
+    } = req.body;
+
+    if (!Username || !Password || !Email || !Firstname || !Lastname|| !Birthdate|| !Gender|| !City|| !Role) {
+      return res.status(400).json({ error: "required field is missing" });
+    }
+
+
+    const [existing] = await db.query(
+      "SELECT * FROM Users WHERE Username = ? OR Email = ?",
+      [Username, Email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(409).json({ error: "Username or Email already exists" });
+    }
+
+
+    const hashedPassword = await bcrypt.hash(Password, SALT_ROUNDS);
+
+
+    const query = `
+      INSERT INTO Users
+      (Username, Password, Firstname, Lastname, Birthdate, Gender, City, Address, Role, Email)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [result] = await db.query(query, [
+      Username, hashedPassword, Firstname, Lastname, Birthdate,
+      Gender, City, Address, Role, Email
+    ]);
+
+
+    const token = jwt.sign({ id: result.insertId, Username }, JWT_SECRET, { expiresIn: '1d' });
+
+    res.json({ success: true, insertedId: result.insertId, token });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
+router.post('/login', async (req, res) => {
+  try {
+    const { Username, Password } = req.body;
+
+    if (!Username || !Password) {
+      return res.status(400).json({ error: "Username and Password are required" });
+    }
+
+    const query = "SELECT * FROM Users WHERE Username = ?";
+    const [rows] = await db.query(query, [Username]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    const user = rows[0];
+
+
+    const match = await bcrypt.compare(Password, user.Password);
+    if (!match) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
+
+    delete user.Password; 
+
+
+    const token = jwt.sign({ id: user.id, Username: user.Username }, JWT_SECRET, { expiresIn: '1d' });
+
+    res.json({ success: true, user, token });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+
+
+
+module.exports = router;
