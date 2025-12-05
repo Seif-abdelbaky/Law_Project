@@ -75,6 +75,44 @@ router.get('/getMatch/:id', async (req, res) => {
     res.json(rows);
 })
 
+
+router.put("/reserveSeat/:id", authMiddleware, async (req, res) => {
+  const name=req.user.Username;
+  const seatId = req.params.id;
+  let alreadyReserved=await db.query("SELECT * FROM Seats WHERE id = ? and reserved=1", [seatId]);
+  console.log(alreadyReserved);
+  alreadyReserved=alreadyReserved[0];
+  if(alreadyReserved.length>0){
+    return res.status(400).json({ message: "Seat already reserved" });
+  }
+  const query = "UPDATE Seats SET reserved = 1, Username=? WHERE id = ?";
+  try {
+    const [rows] = await db.query(query,[name,seatId]);
+    console .log(rows);
+    return  res.json({ message: {"ticketId":seatId} });
+  } catch (error) {
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+
+router.put("/unreserveSeat/:id", authMiddleware, async (req, res) => {
+  const seatId = req.params.id;
+  const name  = req.user.Username;
+  const query = "UPDATE Seats SET reserved = 0,Username=NULL WHERE id = ? and Username=?";  
+
+   try {
+    const [rows] = await db.query(query,[seatId,name]);
+    if (rows.affectedRows === 0) {
+      return res.status(404).json({ message: "Seat not found or not reserved by you" });
+    }
+    return  res.json({ message: {"ticketId":seatId} });
+  } catch (error) {
+    return res.status(500).json({ message: "Database error" });
+  } 
+})
+
+
 router.put("/updateMatch/:id", authMiddleware, async (req, res) => {
   if (!req.user || req.user.role !== 2) {
     return res.status(403).json({ message: "Access denied" });
