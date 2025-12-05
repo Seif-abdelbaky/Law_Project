@@ -3,7 +3,7 @@ const router = express.Router();
 const initDB = require('../db.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
+const authMiddleware = require('../middle_wares/auth_middleware.js');
 let db;
 const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "your_secret_key"; 
@@ -99,8 +99,59 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: "Database error" });
   }
 });
+router.put("/updateData", authMiddleware, async (req, res) => {
+  let { Password, Firstname, Lastname, Birthdate, Gender, City, Address } = req.body;
+  const userId = req.user.id;
 
+  try {
+    
+    const [rows] = await db.query("SELECT * FROM Users WHERE id = ?", [userId]);
 
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
+    const user = rows[0];
 
-module.exports = router;
+    
+    if (!Password) {
+      Password = user.Password;
+    } else {
+      Password = await bcrypt.hash(Password, SALT_ROUNDS);
+    }
+
+    Firstname = Firstname || user.Firstname;
+    Lastname = Lastname || user.Lastname;
+    Birthdate = Birthdate || user.Birthdate;
+    Gender = Gender || user.Gender;
+    City = City || user.City;
+    Address = Address || user.Address;
+
+    const updateQuery = `
+      UPDATE Users 
+      SET Password = ?, Firstname = ?, Lastname = ?, Birthdate = ?, Gender = ?, City = ?, Address = ?
+      WHERE id = ?
+    `;
+
+    const [result] = await db.query(updateQuery, [
+      Password,
+      Firstname,
+      Lastname,
+      Birthdate,
+      Gender,
+      City,
+      Address,
+      userId,
+    ]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({ message: "User updated successfully" });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Database error" });
+  }
+});

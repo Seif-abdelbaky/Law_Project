@@ -19,9 +19,9 @@ router.post('/createStadium', authMiddleware, async (req, res) => {
         try {
       const [result] = await db.query(query, [name, width, length]);
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: "Stadium creation failed" });
       }
-      return res.json({ message: "User authorized successfully" });
+      return res.json({ message: "Stadium created successfully"});
     } catch {
       return res.status(500).json({ message: "Database error" });
     }
