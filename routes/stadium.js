@@ -10,9 +10,8 @@ router.use(async (req, res, next) => {
   next();
 });
 
-router.put('/createStadium', authMiddleware, async (req, res) => {
+router.post('/createStadium', authMiddleware, async (req, res) => {
   if (req.user && req.user.role === 2) {
-    const userId = req.params.id;
     const name = req.body.name;
     const width = req.body.width;
     const length = req.body.length;

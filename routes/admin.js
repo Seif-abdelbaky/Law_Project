@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const initDB = require('../db.js');
-const authMiddleware = require('../middleware/authMiddleware');
+const authMiddleware = require('../middle_wares/auth_middleware.js');
 
 let db;
 
@@ -10,10 +10,10 @@ router.use(async (req, res, next) => {
   next();
 });
 
-router.put('/approveAuth/:id', authMiddleware, async (req, res) => {
+router.put('/approveAuth/:Username', authMiddleware, async (req, res) => {
   if (req.user && req.user.role === 1) {
-    const userId = req.params.id;
-    const query = `UPDATE Users SET isAuthorized = 1 WHERE id = ?`;
+    const userId = req.params.Username;
+    const query = `UPDATE Users SET isAuthorized = 1 WHERE Username = ?`;
     try {
       const [result] = await db.query(query, [userId]);
       if (result.affectedRows === 0) {
@@ -29,7 +29,7 @@ router.put('/approveAuth/:id', authMiddleware, async (req, res) => {
 
 router.get('/getAllUnauthorized', authMiddleware, async (req, res) => {
   if (req.user && req.user.role === 1) {
-    const query = `SELECT id, Username, Firstname, Lastname, Email FROM Users WHERE isAuthorized = 0`;
+    const query = `SELECT  Username, Firstname, Lastname, Email FROM Users WHERE isAuthorized = 0`;
     try {
       const [rows] = await db.query(query);
       return res.json({ unauthorizedUsers: rows });
@@ -41,8 +41,10 @@ router.get('/getAllUnauthorized', authMiddleware, async (req, res) => {
 });
 
 router.get('/getAllUsers', authMiddleware, async (req, res) => {
-  if (req.user && req.user.role === 1) {
-    const query = `SELECT id, Username, Firstname, Lastname, Email FROM Users`;
+  console.log(req.user);
+  console.log(req.user.role);
+  if (req.user && req.user.role == 1) {
+    const query = `SELECT  Username, Firstname, Lastname, Email FROM Users`;
     try {
       const [rows] = await db.query(query);
       return res.json({ users: rows });
@@ -53,10 +55,10 @@ router.get('/getAllUsers', authMiddleware, async (req, res) => {
   return res.status(403).json({ message: "Access denied" });
 });
 
-router.delete('/deleteUser/:id', authMiddleware, async (req, res) => {
+router.delete('/deleteUser/:Username', authMiddleware, async (req, res) => {
   if (req.user && req.user.role === 1) {
-    const userId = req.params.id;
-    const query = `DELETE FROM Users WHERE id = ?`;
+    const userId = req.params.Username;
+    const query = `DELETE FROM Users WHERE Username = ?`;
     try {
       await db.query(query, [userId]);
       return res.json({ message: "User deleted successfully" });

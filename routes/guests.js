@@ -72,15 +72,17 @@ router.post('/login', async (req, res) => {
 
     const query = "SELECT * FROM Users WHERE Username = ?";
     const [rows] = await db.query(query, [Username]);
-
+    console.log(rows);
     if (rows.length === 0) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
-
     const user = rows[0];
-
+    if (user  .isAuthorized === 0) {
+      return res.status(403).json({ success: false, message: "User not authorized" });
+    }
 
     const match = await bcrypt.compare(Password, user.Password);
+    console.log(match)
     if (!match) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
@@ -88,7 +90,7 @@ router.post('/login', async (req, res) => {
     delete user.Password; 
 
 
-    const token = jwt.sign({ id: user.id, Username: user.Username }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user.id, Username: user.Username,role:user.Role }, JWT_SECRET, { expiresIn: '1d' });
 
     res.json({ success: true, user, token });
 

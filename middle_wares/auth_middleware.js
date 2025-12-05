@@ -1,5 +1,6 @@
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 dotenv.config();
 
 const authMiddleware = (req, res, next) => {
@@ -25,4 +26,4 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-export default authMiddleware;
+module.exports = authMiddleware;
