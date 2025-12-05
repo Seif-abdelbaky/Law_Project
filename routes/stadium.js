@@ -40,44 +40,11 @@ router.post('/createStadium', authMiddleware, async (req, res) => {
   return res.status(403).json({ message: "Access denied" });
 });
 
-router.get('/getAllUnauthorized', authMiddleware, async (req, res) => {
-  if (req.user && req.user.role === 1) {
-    const query = `SELECT id, Username, Firstname, Lastname, Email FROM Users WHERE isAuthorized = 0`;
-    try {
-      const [rows] = await db.query(query);
-      return res.json({ unauthorizedUsers: rows });
-    } catch {
-      return res.status(500).json({ message: "Database error" });
-    }
-  }
-  return res.status(403).json({ message: "Access denied" });
-});
 
-router.get('/getAllUsers', authMiddleware, async (req, res) => {
-  if (req.user && req.user.role === 1) {
-    const query = `SELECT id, Username, Firstname, Lastname, Email FROM Users`;
-    try {
-      const [rows] = await db.query(query);
-      return res.json({ users: rows });
-    } catch {
-      return res.status(500).json({ message: "Database error" });
-    }
-  }
-  return res.status(403).json({ message: "Access denied" });
-});
-
-router.delete('/deleteUser/:id', authMiddleware, async (req, res) => {
-  if (req.user && req.user.role === 1) {
-    const userId = req.params.id;
-    const query = `DELETE FROM Users WHERE id = ?`;
-    try {
-      await db.query(query, [userId]);
-      return res.json({ message: "User deleted successfully" });
-    } catch {
-      return res.status(500).json({ message: "Database error" });
-    }
-  }
-  return res.status(403).json({ message: "Access denied" });
+router.get  ('/getAllStadiums', authMiddleware,async (req, res) => {
+  const query = "SELECT * FROM stadium";
+     const [rows] = await db.query(query);
+     res.json(rows);
 });
 
 module.exports = router;
