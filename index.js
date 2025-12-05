@@ -16,7 +16,7 @@ app.use(express.json());
 app.use('/guests', require('./routes/guests.js'));
 app.use('/matches', require('./routes/matches.js'));
 app.use('/admin', require('./routes/admin.js'));
-
+app.use('/stadium', require('./routes/stadium.js'));
 
 app.listen(3000, async() => {
 connection=await connectToDb();
