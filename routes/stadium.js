@@ -21,7 +21,7 @@ router.post('/createStadium', authMiddleware, async (req, res) => {
       const stadiumId = result.insertId;
       console
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: "Stadium creation failed" });
       }
 
 
