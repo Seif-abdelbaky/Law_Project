@@ -24,13 +24,12 @@ router.post('/createStadium', authMiddleware, async (req, res) => {
         return res.status(404).json({ message: "Stadium creation failed" });
       }
 
-
-    insertSeatsQuery = `INSERT INTO Seats (col, stadium_id, r,reserved) VALUES (?, ?, ?,0)`;
-      for (let r = 1; r <= length; r++) {
-        for (let c = 1; c <= width; c++) {
-          await db.query(insertSeatsQuery, [c, stadiumId, r]);
-        }
-      }
+// insertSeatsQuery = `INSERT INTO Seats (col, stadium_id, r,reserved) VALUES (?, ?, ?,0)`;
+//       for (let r = 1; r <= length; r++) {
+//         for (let c = 1; c <= width; c++) {
+//           await db.query(insertSeatsQuery, [c, stadiumId, r]);
+//         }
+//       }
       
       return res.json({ message: "User authorized successfully" });
     } catch {
