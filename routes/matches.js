@@ -169,12 +169,20 @@ router.put("/updateMatch/:id", authMiddleware, async (req, res) => {
 
     
     const [stadiumCheck] = await db.query(
-      "SELECT id FROM Matches WHERE StadiumId = ? AND id != ?",
+      "SELECT * FROM Matches WHERE StadiumId = ? AND id != ?",
       [StadiumId, matchId]
     );
 
     if (stadiumCheck.length > 0) {
-      return res.status(400).json({ message: "This stadium is already assigned to another match" });
+      for (let row of stadiumCheck) {
+        date1 = new Date(row.Date);
+        date2 = new Date(Date);
+        const threeHoursInMs = 3 * 60 * 60 * 1000;
+        if (Math.abs(date1 - date2) < threeHoursInMs) {
+          return res.status(400).json({ message: "This stadium is already assigned to another match at a conflicting time" });
+        }
+      }
+      
     }
 
     
