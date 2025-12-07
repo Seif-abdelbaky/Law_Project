@@ -68,12 +68,32 @@ router.get('/getAllMatches', async (req, res) => {
 router.get('/getMatch/:id', async (req, res) => {
   const matchId = req.params.id;
   console.log(matchId);
- const query = "SELECT Seats.id,Seats.col,Seats.r,Seats.reserved FROM Matches,Seats,stadium WHERE Matches.StadiumId=stadium.id and Seats.stadium_id=stadium.id and Matches.id=?";
+  const query = "SELECT Matches.Hometeam,Matches.Awayteam,Matches.Matchvenue,Matches.Date,Matches.Mainref,Matches.Lineref1,Matches.Lineref2,Matches.StadiumId,Seats.id,Seats.col,Seats.r,Seats.reserved FROM Matches,Seats,stadium WHERE Matches.StadiumId=stadium.id and Seats.stadium_id=stadium.id and Matches.id=?";
   
- console.log(query);
-    const [rows] = await db.query(query,[matchId]);
-    res.json(rows);
-})
+  const [rows] = await db.query(query,[matchId]);
+
+
+  const match = {
+    Hometeam: rows[0].Hometeam,
+    Awayteam: rows[0].Awayteam,
+    Matchvenue: rows[0].Matchvenue,
+    Date: rows[0].Date,
+    Mainref: rows[0].Mainref,
+    Lineref1: rows[0].Lineref1,
+    Lineref2: rows[0].Lineref2,
+    StadiumId: rows[0].StadiumId,
+  };
+
+  const seats = rows.map(r => ({
+    id: r.id,
+    col: r.col,
+    r: r.r,
+    reserved: r.reserved
+  }));
+
+  return res.json({ match, seats });
+});
+
 
 
 router.put("/reserveSeat/:id", authMiddleware, async (req, res) => {
