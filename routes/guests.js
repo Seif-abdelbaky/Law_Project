@@ -156,4 +156,29 @@ router.put("/updateData", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/userDetails", authMiddleware, async (req, res) => {
+  try {
+    const username = req.user.Username; 
+
+    const [rows] = await db.query(
+      "SELECT Username, Firstname, Lastname, Birthdate, Gender, City, Address, Role, Email FROM Users WHERE Username = ?",
+      [username]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({
+      success: true,
+      user: rows[0]
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+
 module.exports = router;
