@@ -20,24 +20,34 @@ router.post('/createMatch', authMiddleware, async (req, res) => {
     const Lineref1= req.body.Lineref1;
     const Lineref2= req.body.Lineref2;
     const stadiumId= req.body.stadiumId;
-    const query = `Select * from Matches where StadiumId=?`;
+    const query = `Select * from Matches where StadiumId=? and Date=?`;
         try {
           console.log("stadiumId:", stadiumId);
-      const [result] = await db.query(query, [stadiumId]);
+      const [result] = await db.query(query, [stadiumId,date]);
       console.log(result);
-      if (result.affectedRows !== 0) {
+      if (result.length !== 0) {
         return res.status(404).json({ message: "Stadium taken" });
       }
 
        if(Hometeam==Awayteam){
     return res.status(400).json({ message: "Hometeam and Awayteam cannot be the same" });
   }
+  const query1 = `Select * from stadium where id=?`;
+  const [result1] = await db.query(query1, [stadiumId]);
+  console.log(result1);
   const insertMatchQuery = `INSERT INTO Matches (Hometeam, Awayteam, Matchvenue, Date, Mainref, Lineref1, Lineref2, stadiumId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
   try {
-    console.log (result[0].name);
-    const [matchResult] = await db.query(insertMatchQuery, [Hometeam, Awayteam, result[0].name, date, Mainref, Lineref1, Lineref2, stadiumId]);
+    console.log (result1[0].name);
+    const [matchResult] = await db.query(insertMatchQuery, [Hometeam, Awayteam, result1[0].name, date, Mainref, Lineref1, Lineref2, stadiumId]);
     console.log(matchResult);
-    
+    insertSeatsQuery = `INSERT INTO Seats (col, stadium_id, r,reserved,matchId) VALUES (?, ?, ?,0,?)`;
+    const width=result1[0].width;
+    const length=result1[0].length;
+      for (let r = 1; r <= length; r++) {
+        for (let c = 1; c <= width; c++) {
+          await db.query(insertSeatsQuery, [c, stadiumId, r, matchResult.insertId]);
+        }
+      }
     return res.json({ message: "Match created successfully", matchId: matchResult.insertId });
   } catch (error){
     return res.status(500).json({ message:  error.message });
@@ -68,9 +78,9 @@ router.get('/getAllMatches', async (req, res) => {
 router.get('/getMatch/:id', async (req, res) => {
   const matchId = req.params.id;
   console.log(matchId);
-  const query = "SELECT Matches.Hometeam,Matches.Awayteam,Matches.Matchvenue,Matches.Date,Matches.Mainref,Matches.Lineref1,Matches.Lineref2,Matches.StadiumId,Seats.id,Seats.col,Seats.r,Seats.reserved FROM Matches,Seats,stadium WHERE Matches.StadiumId=stadium.id and Seats.stadium_id=stadium.id and Matches.id=?";
+  const query = "SELECT Matches.Hometeam,Matches.Awayteam,Matches.Matchvenue,Matches.Date,Matches.Mainref,Matches.Lineref1,Matches.Lineref2,Matches.StadiumId,Seats.id,Seats.col,Seats.r,Seats.reserved FROM Matches,Seats,stadium WHERE Seats.matchId=? and Matches.StadiumId=stadium.id and Seats.stadium_id=stadium.id and Matches.id=?";
   
-  const [rows] = await db.query(query,[matchId]);
+  const [rows] = await db.query(query,[matchId,matchId]);
 
 
   const match = {
@@ -140,10 +150,17 @@ router.put("/updateMatch/:id", authMiddleware, async (req, res) => {
 
   const matchId = req.params.id;
 
-  let { Hometeam, Awayteam, Matchvenue, Date, Mainref, Lineref1, Lineref2, StadiumId } = req.body;
-
   try {
-    
+    // Extract fields directly without destructuring to avoid Date conflict
+    const Hometeam = req.body.Hometeam;
+    const Awayteam = req.body.Awayteam;
+    const Matchvenue = req.body.Matchvenue;
+    const matchDate = req.body.Date;  // Extract as matchDate
+    const Mainref = req.body.Mainref;
+    const Lineref1 = req.body.Lineref1;
+    const Lineref2 = req.body.Lineref2;
+    const StadiumId = req.body.StadiumId;
+
     const [rows] = await db.query("SELECT * FROM Matches WHERE id = ?", [matchId]);
 
     if (rows.length === 0) {
@@ -152,40 +169,20 @@ router.put("/updateMatch/:id", authMiddleware, async (req, res) => {
 
     const match = rows[0];
 
-    
-    Hometeam = Hometeam || match.Hometeam;
-    Awayteam = Awayteam || match.Awayteam;
-    Matchvenue = Matchvenue || match.Matchvenue;
-    Date = Date || match.Date;
-    Mainref = Mainref || match.Mainref;
-    Lineref1 = Lineref1 || match.Lineref1;
-    Lineref2 = Lineref2 || match.Lineref2;
-    StadiumId = StadiumId || match.StadiumId;
+    // Use the extracted values with defaults from the database
+    const updatedHometeam = Hometeam !== undefined ? Hometeam : match.Hometeam;
+    const updatedAwayteam = Awayteam !== undefined ? Awayteam : match.Awayteam;
+    const updatedMatchvenue = Matchvenue !== undefined ? Matchvenue : match.Matchvenue;
+    const updatedMatchDate = matchDate !== undefined ? matchDate : match.Date;
+    const updatedMainref = Mainref !== undefined ? Mainref : match.Mainref;
+    const updatedLineref1 = Lineref1 !== undefined ? Lineref1 : match.Lineref1;
+    const updatedLineref2 = Lineref2 !== undefined ? Lineref2 : match.Lineref2;
+    const updatedStadiumId = StadiumId !== undefined ? StadiumId : match.StadiumId;
 
-    
-    if (Hometeam === Awayteam) {
+    if (updatedHometeam === updatedAwayteam) {
       return res.status(400).json({ message: "Hometeam and Awayteam cannot be the same" });
     }
 
-    
-    const [stadiumCheck] = await db.query(
-      "SELECT * FROM Matches WHERE StadiumId = ? AND id != ?",
-      [StadiumId, matchId]
-    );
-
-    if (stadiumCheck.length > 0) {
-      for (let row of stadiumCheck) {
-        date1 = new Date(row.Date);
-        date2 = new Date(Date);
-        const threeHoursInMs = 3 * 60 * 60 * 1000;
-        if (Math.abs(date1 - date2) < threeHoursInMs) {
-          return res.status(400).json({ message: "This stadium is already assigned to another match at a conflicting time" });
-        }
-      }
-      
-    }
-
-    
     const updateQuery = `
       UPDATE Matches 
       SET Hometeam = ?, Awayteam = ?, Matchvenue = ?, Date = ?, 
@@ -194,22 +191,22 @@ router.put("/updateMatch/:id", authMiddleware, async (req, res) => {
     `;
 
     const [result] = await db.query(updateQuery, [
-      Hometeam,
-      Awayteam,
-      Matchvenue,
-      Date,
-      Mainref,
-      Lineref1,
-      Lineref2,
-      StadiumId,
+      updatedHometeam,
+      updatedAwayteam,
+      updatedMatchvenue,
+      updatedMatchDate,
+      updatedMainref,
+      updatedLineref1,
+      updatedLineref2,
+      updatedStadiumId,
       matchId
     ]);
 
     return res.json({ message: "Match updated successfully" });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Database error" });
+    console.error("Error updating match:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
   }
 });
 module.exports = router;
